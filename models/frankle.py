@@ -1,6 +1,4 @@
-"""
-Replications of models from Frankle et al. Lottery Ticket Hypothesis
-"""
+
 
 import torch
 import torch.autograd as autograd
