@@ -1,0 +1,48 @@
+# Architecture
+arch: DenseNet
+
+# ===== Dataset ===== #
+data: <path/to/data-dir>
+set: CIFAR10
+ood_set: [SVHN] # [CIFAR100,iNaturalist,SUN,Places,dtd,LSUN,SVHN]
+name: cifar10_UM
+
+# ===== Learning Rate Policy ======== #
+optimizer: sgd
+lr: 0.1
+lr_policy: cosine_lr
+
+# ===== Network training config ===== #
+pretrained: pretrained\pretrained_model.state
+multigpu: [0]
+epochs: 100
+weight_decay: 0.0001
+momentum: 0.9
+batch_size: 256
+num_classes: 10
+criterion: UM
+UM: 0.15
+save_every: 50
+
+# ===== Sparsity =========== #
+conv_type: DenseConv
+linear_type: DenseLinear
+bn_type: NonAffineBatchNorm
+init: kaiming_normal
+mode: fan_in
+nonlinearity: relu
+prune_rate: 1.0
+freeze_weights: False
+
+# ===== Hardware setup ===== #
+workers: 4
+
+# ===== Measures ===== #
+# msp: True
+energy: True
+# odin: True
+# mahalanobis: True
+
+final: True
+
+# configs/smallscale/example.yaml

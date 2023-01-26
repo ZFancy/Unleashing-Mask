@@ -1,0 +1,37 @@
+# Architecture
+arch: DenseNet
+
+# ===== Dataset ===== #
+data: <path/to/data-dir>
+set: CIFAR10
+name: estimate_loss_cifar10
+
+# ===== Learning Rate Policy ======== #
+optimizer: sgd
+lr: 0.1
+lr_policy: cosine_lr
+
+# ===== Network training config ===== #
+pretrained: pretrained\pretrained_model.state
+multigpu: [0]
+epochs: 100
+weight_decay: 0.0001
+momentum: 0.9
+batch_size: 512
+num_classes: 10
+criterion: CrossEntropyLoss
+
+# ===== Sparsity =========== #
+conv_type: SubnetConv
+linear_type: SubnetLinear
+bn_type: NonAffineBatchNorm
+init: kaiming_normal
+mode: fan_in
+nonlinearity: relu
+prune_rate: 0.965
+freeze_weights: True
+
+# ===== Hardware setup ===== #
+workers: 4
+
+# configs/estimate_loss/estimate_loss_cifar10.yaml
