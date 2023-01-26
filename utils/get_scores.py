@@ -327,7 +327,7 @@ class measures(object):
         auroc, aupr, fpr = self.save_best("mahalanobis", labels, examples, id_pred, ood_pred, model, epoch, recall_level=recall_level)
         return id_pred, ood_pred, auroc, aupr, fpr
 
-# https://github.com/wetliu/energy_ood/blob/77f3c09b788bb5a7bfde6fd3671228320ea0949c/utils/display_results.py
+
 def stable_cumsum(arr, rtol=1e-05, atol=1e-08):
     """Use high precision for cumsum and check that final value matches sum
     Parameters
