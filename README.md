@@ -1,4 +1,4 @@
-# Unleashing Mask: Explore the Potential Out-Of-Distribution Detection Capability
+# Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability
 
 ## Setup
 
