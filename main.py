@@ -47,6 +47,7 @@ import models
 from utils.custom_loss import CustomLoss
 
 def main():
+    torch.autograd.set_detect_anomaly(True)
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -112,8 +113,8 @@ def main_worker(args):
     measure = ood_measure(data.val_loader, ood_loaders, msp=args.msp, energy=args.energy, odin=args.odin, mahalanobis=args.mahalanobis)
 
     if args.evaluate:
-        acc1, acc5 = validate(data.val_loader, full_model, criterion, args, writer=None, epoch=args.start_epoch)
-        measure.ood_metrics(full_model, args.epochs, data.train_loader)
+        acc1, acc5 = validate(data.val_loader, model, criterion, args, writer=None, epoch=args.start_epoch)
+        measure.ood_metrics(model, args.epochs, data.train_loader)
         return
 
     writer = SummaryWriter(log_dir=log_base_dir)
@@ -148,11 +149,11 @@ def main_worker(args):
     
     print('---------------------------------before training---------------------------------')
     start_validation = time.time()
-    acc1, acc5 = validate(data.val_loader, full_model, criterion, args, writer, -1)
+    acc1, acc5 = validate(data.val_loader, model, criterion, args, writer, -1)
     validation_time.update((time.time() - start_validation) / 60)
-    if (0) % args.save_every == 0:
-        print("checking the OOD performance of the initial model ...")
-        measure.ood_metrics(model, 0, data.train_loader)
+    # if (0) % args.save_every == 0:
+    #     print("checking the OOD performance of the initial model ...")
+    #     measure.ood_metrics(model, 0, data.train_loader)
 
     # Start training
     print('---------------------------------start training---------------------------------')
@@ -170,8 +171,8 @@ def main_worker(args):
         acc1, acc5 = validate(data.val_loader, model, criterion, args, writer, epoch)
         validation_time.update((time.time() - start_validation) / 60)
         # check the OOD performance every 5 * save_every epochs
-        if (epoch + 1) % (args.save_every * 5) == 0:
-            measure.ood_metrics(model, epoch+1, data.train_loader)
+        # if (epoch + 1) % (args.save_every) == 0:
+        #     measure.ood_metrics(model, epoch+1, data.train_loader)
 
         # remember best acc@1 and save checkpoint
         is_best = acc1 > best_acc1
@@ -212,8 +213,8 @@ def main_worker(args):
         writer.add_scalar("test/lr", cur_lr, epoch)
         end_epoch = time.time()
 
-    # if args.final:
-    #     measure.ood_metrics(model, args.epochs, data.train_loader)
+    if args.final:
+        measure.ood_metrics(model, args.epochs, data.train_loader)
 
 
 if __name__ == "__main__":

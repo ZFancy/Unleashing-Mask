@@ -22,6 +22,9 @@ warnings.filterwarnings("ignore")
 # from tensorboard_logger import configure, log_value
 import logging
 
+import utils.utils_awp as awp
+from args import args
+
 class NeuralLinear(object):
     '''
     the neural linear model
@@ -45,9 +48,10 @@ class NeuralLinear(object):
         self.beta_s = None
         self.train_x_ood = torch.empty(0, 3, 32, 32)
         self.train_x_id_base = torch.empty(0, 3, 32, 32)
+        self.diff = None
 
     def update_representation(self):
-        latent_z = torch.empty(0, 342, device = "cuda")
+        latent_z = torch.empty(0, self.repr_dim, device = "cuda")
         print('begin updating representation')
         data_loader = torch.utils.data.DataLoader(
                 SimpleDataset(self.train_x, self.train_y),
@@ -56,6 +60,7 @@ class NeuralLinear(object):
         with torch.no_grad():
             for images,_ in data_loader:
                 partial_latent_z = self.model.module.get_representation(images.cuda())
+                # print(latent_z.shape)
                 latent_z = torch.cat((latent_z , partial_latent_z), dim = 0)
             self.latent_z = latent_z
             assert len(self.latent_z) == len(self.train_x)
@@ -102,21 +107,21 @@ class NeuralLinear(object):
             in_output = cat_output[:in_len] 
             out_output = cat_output[in_len:] 
 
-            in_loss = (criterion(in_output, in_target) - self.args.UM_ce).abs() + self.args.UM_ce
+            in_loss = criterion(in_output, in_target)
             in_losses.update(in_loss.data, in_len) 
 
             E = -torch.logsumexp(cat_output, dim=1)
             Ec_in = E[:in_len]
             Ec_out = E[in_len:]
-            in_energy_loss = (torch.pow(F.relu(Ec_in-self.args.m_in), 2).mean() - self.args.UM_ine).abs() + self.args.UM_ine
-            out_energy_loss = (torch.pow(F.relu(self.args.m_out-Ec_out), 2).mean() - self.args.UM_oute).abs() + self.args.UM_oute
+            in_energy_loss = torch.pow(F.relu(Ec_in-self.args.m_in), 2).mean()
+            out_energy_loss = torch.pow(F.relu(self.args.m_out-Ec_out), 2).mean()
 
 
             in_energy_losses.update(in_energy_loss.data, in_len)
             out_energy_losses.update(out_energy_loss.data, out_len)
 
 
-            loss = ((in_loss + self.args.energy_beta * (((out_energy_loss + in_energy_loss) - self.args.UM_e).abs() + self.args.UM_e)) - self.args.UM_whole).abs() + self.args.UM_whole
+            loss = in_loss + self.args.energy_beta * (out_energy_loss + in_energy_loss)
 
 
             nat_prec1 = accuracy(in_output.data, in_target, topk=(1,))[0]
@@ -180,22 +185,22 @@ class NeuralLinear(object):
             in_output = cat_output[:in_len] 
             out_output = cat_output[in_len:] 
 
-            in_loss = (criterion(in_output, in_target) - self.args.UM_ce).abs() + self.args.UM_ce
+            in_loss = criterion(in_output, in_target)
             in_losses.update(in_loss.data, in_len) 
 
-            if self.args.oe:
+            if self.args.oe_ood_method == 'oe':
                 loss = in_loss + 0.5 * -(out_output.mean(1) - torch.logsumexp(out_output, dim=1)).mean()
             else:
                 E = -torch.logsumexp(cat_output, dim=1)
                 Ec_in = E[:in_len]
                 Ec_out = E[in_len:]
-                in_energy_loss = (torch.pow(F.relu(Ec_in-self.args.m_in), 2).mean() - self.args.UM_ine).abs() + self.args.UM_ine
-                out_energy_loss = (torch.pow(F.relu(self.args.m_out-Ec_out), 2).mean() - self.args.UM_oute).abs() + self.args.UM_oute
+                in_energy_loss = torch.pow(F.relu(Ec_in-self.args.m_in), 2).mean()
+                out_energy_loss = torch.pow(F.relu(self.args.m_out-Ec_out), 2).mean()
 
                 in_energy_losses.update(in_energy_loss.data, in_len)
                 out_energy_losses.update(out_energy_loss.data, out_len)
 
-                loss = ((in_loss + self.args.energy_beta * (((out_energy_loss + in_energy_loss) - self.args.UM_e).abs() + self.args.UM_e)) - self.args.UM_whole).abs() + self.args.UM_whole
+                loss = in_loss + self.args.energy_beta * (out_energy_loss + in_energy_loss)
 
 
             nat_prec1 = accuracy(in_output.data, in_target, topk=(1,))[0]
@@ -222,6 +227,104 @@ class NeuralLinear(object):
                       in_e_loss=in_energy_losses, nat_top1=nat_top1,
                       out_e_loss=out_energy_losses))
 
+    def train_doe(self, train_loader_in, train_loader_out, criterion, optimizer, epoch, proxy, proxy_optim):
+        batch_time = AverageMeter()
+        out_confs = AverageMeter()
+        in_confs = AverageMeter()
+        in_losses = AverageMeter()
+        out_losses = AverageMeter()
+        out_energy_losses = AverageMeter()
+        in_energy_losses = AverageMeter()
+        nat_top1 = AverageMeter()
+        print("######## Start training NN at epoch {} ########".format(epoch))
+        end = time.time()
+        out_len = len(train_loader_out.dataset)
+        in_len = len(train_loader_in.dataset)
+
+        for i, (in_set, out_set) in enumerate(zip(train_loader_in, train_loader_out)):
+            in_len = len(in_set[0])
+            out_len = len(out_set[0])
+
+            in_input = in_set[0].cuda() 
+            in_target = in_set[1].cuda() 
+            out_input = out_set[0].cuda() 
+            out_target = out_set[1].cuda()  
+
+            self.model.train()
+
+            cat_input = torch.cat((in_input, out_input), 0) 
+        
+            if epoch >= args.warmup:
+                gamma =  torch.Tensor([1e-1,1e-2,1e-3,1e-4])[torch.randperm(4)][0]
+                proxy.load_state_dict(self.model.state_dict())
+                proxy.train()
+                scale = torch.Tensor([1]).cuda().requires_grad_()
+                x = proxy(cat_input) * scale
+                l_sur = (x[len(in_set[0]):].mean(1) - torch.logsumexp(x[len(in_set[0]):], dim=1)).mean()
+                # l_sur = - (x.log_softmax(1) * (x / 0.1).softmax(1).detach()).sum(-1).mean()
+                reg_sur = torch.sum(torch.autograd.grad(l_sur, [scale], create_graph = True)[0] ** 2)
+                proxy_optim.zero_grad()
+                reg_sur.backward()
+                # l_sur.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
+                proxy_optim.step()
+                if epoch == args.warmup and i == 0:
+                    self.diff = awp.diff_in_weights(self.model, proxy)
+                else:
+                    # diff = awp.diff_in_weights(net, proxy)
+                    self.diff = awp.average_diff(self.diff, awp.diff_in_weights(self.model, proxy), beta = .6)
+
+                awp.add_into_weights(self.model, self.diff, coeff = gamma)
+
+            cat_output = self.model(cat_input)   
+            in_output = cat_output[:in_len] 
+            out_output = cat_output[in_len:] 
+        
+            l_ce = criterion(cat_output[:len(in_set[0])], in_target)
+            l_oe = - (cat_output[len(in_set[0]):].mean(1) - torch.logsumexp(cat_output[len(in_set[0]):], dim=1)).mean()
+
+            if epoch >= args.warmup:
+                loss = l_oe
+            else: 
+                loss = l_ce +  l_oe
+                
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1) 
+            optimizer.step()
+
+            if epoch >= args.warmup:
+                awp.add_into_weights(self.model, self.diff, coeff = - gamma)
+                optimizer.zero_grad()
+                x = self.model(cat_input)
+                l_ce = criterion(x[:len(in_set[0])], in_target)
+                loss = l_ce # + l_kl
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
+                optimizer.step()
+
+            in_losses.update(l_ce.data, in_len) 
+            out_losses.update(l_oe.data, out_len)
+
+            nat_prec1 = accuracy(in_output.data, in_target, topk=(1,))[0]
+
+            nat_top1.update(nat_prec1, in_len)                                                      
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+            
+            if i % self.args.print_freq == 0:
+                print('Epoch: [{0}][{1}/{2}]\t'
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'In Loss {in_loss.val:.4f} ({in_loss.avg:.4f})\t'
+                  'Prec@1 {nat_top1.val:.3f} ({nat_top1.avg:.3f})\t'
+                  'Out Loss {out_loss.val:.4f} ({out_loss.avg:.4f})\t'.format(
+                      epoch, i, len(train_loader_in), batch_time=batch_time,
+                      in_loss = in_losses,
+                      nat_top1=nat_top1,
+                      out_loss=out_losses))
+
 
     def sample_BDQN(self):
         # Sample sigma^2, and beta conditional on sigma^2
@@ -247,8 +350,8 @@ class NeuralLinear(object):
 
     def predict(self, x):
         latent_z = self.model.module.get_representation(x)
-        print(latent_z.size())
-        print(self.beta_s.size())
+        # print(latent_z.size())
+        # print(self.beta_s.size())
         return torch.matmul(self.beta_s, latent_z.T).T 
 
     def update_bays_reg_BDQN(self):

@@ -68,7 +68,7 @@ class ImageNet:
             **kwargs
         )
 
-
+# https://www.kaggle.com/code/qeeevee/imagenet-pytorch
 def resize_image(src_image, size=(32,32), bg_color="white"): 
     # resize the image so the longest dimension matches our target size
     src_image.thumbnail(size, Image.ANTIALIAS)

@@ -1,0 +1,47 @@
+# Architecture
+arch: DenseNet
+
+# ===== Dataset ===== #
+data: <path/to/data-dir>
+set: CIFAR100
+ood_set: [CIFAR10,iNaturalist,SUN,Places,dtd,LSUN,SVHN]
+name: cifar100_um
+
+# ===== Learning Rate Policy ======== #
+optimizer: sgd
+lr: 0.1
+lr_policy: cosine_lr
+
+# ===== Network training config ===== #
+pretrained: runs/pretrained_models/densenet_cifar100_best.state
+multigpu: [0]
+epochs: 100
+weight_decay: 0.0001
+momentum: 0.9
+droprate: 0.3
+batch_size: 256
+num_classes: 100
+criterion: CrossEntropyLoss
+UM: 0.
+save_every: 1
+
+# ===== Sparsity =========== #
+conv_type: DenseConv
+linear_type: DenseLinear
+bn_type: NonAffineBatchNorm
+init: kaiming_normal
+mode: fan_in
+nonlinearity: relu
+prune_rate: 1.0
+freeze_weights: False
+
+# ===== Hardware setup ===== #
+workers: 1
+
+# ===== Measures ===== #
+# msp: True
+energy: True
+# odin: True
+# mahalanobis: True
+
+final: True

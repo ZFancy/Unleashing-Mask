@@ -108,7 +108,7 @@ class _SubnetConv(nn.Conv2d):
             return self.weight.abs()
 
     def forward(self, x):
-        m = GetSubnet.apply(self.clamped_scores, self.prune_rate, self.mask, self.threshold)
+        m = _GetSubnet.apply(self.clamped_scores, self.prune_rate, self.mask, self.threshold)
         self.temp_mask.data = m
         w = self.weight * m
         x = F.conv2d(

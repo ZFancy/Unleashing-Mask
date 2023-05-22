@@ -36,7 +36,8 @@ def set_threshold(model):
         model.set_threshold()
 
 def get_threshold(model, prune_rate, set_mask=False):
-    values = torch.tensor([]).cuda()
+    # values = torch.tensor([]).cuda()
+    values = torch.tensor([])
     for n, m in model.named_modules():
         if hasattr(m, "clamped_scores") and hasattr(m, "mask") and m.mask is not None:
             values = torch.cat((values, m.clamped_scores[torch.nonzero(m.mask > 0, as_tuple=True)].flatten()), 0)
@@ -72,6 +73,44 @@ def freeze_model_weights(model):
 
     for n, m in model.named_modules():
         if hasattr(m, "weight") and m.weight is not None:
+            print(f"==> No gradient to {n}.weight")
+            m.weight.requires_grad = False
+            if m.weight.grad is not None:
+                print(f"==> Setting gradient of {n}.weight to None")
+                m.weight.grad = None
+
+            if hasattr(m, "bias") and m.bias is not None:
+                print(f"==> No gradient to {n}.bias")
+                m.bias.requires_grad = False
+
+                if m.bias.grad is not None:
+                    print(f"==> Setting gradient of {n}.bias to None")
+                    m.bias.grad = None
+
+def freeze_model_conv(model):
+    print("=> Freezing model conv layers")
+
+    for n, m in model.named_modules():
+        if "fc" not in n and hasattr(m, "weight") and m.weight is not None:
+            print(f"==> No gradient to {n}.weight")
+            m.weight.requires_grad = False
+            if m.weight.grad is not None:
+                print(f"==> Setting gradient of {n}.weight to None")
+                m.weight.grad = None
+
+            if hasattr(m, "bias") and m.bias is not None:
+                print(f"==> No gradient to {n}.bias")
+                m.bias.requires_grad = False
+
+                if m.bias.grad is not None:
+                    print(f"==> Setting gradient of {n}.bias to None")
+                    m.bias.grad = None
+
+def freeze_model_fc(model):
+    print("=> Freezing model conv fc layer")
+
+    for n, m in model.named_modules():
+        if "fc" in n and hasattr(m, "weight") and m.weight is not None:
             print(f"==> No gradient to {n}.weight")
             m.weight.requires_grad = False
             if m.weight.grad is not None:
@@ -314,6 +353,10 @@ def get_model(args, full=False):
     # freezing the weights if we are only doing subnet training
     if args.freeze_weights and not full:
         freeze_model_weights(model)
+    if args.freeze_conv:
+        freeze_model_conv(model)
+    if args.freeze_fc:
+        freeze_model_fc(model)
     if args.freeze_subnet:
         freeze_model_subnet(model)
 
@@ -511,6 +554,7 @@ def select_ood(ood_loader, batch_size, num_classes, pool_size, ood_dataset_size)
             duration += time.time() - start
             all_ood_input = torch.cat((all_ood_input, input), dim = 0)
     print('Scanning Time: ',  duration)
+    # print(len(all_ood_input), ood_dataset_size)
     selected_indices = random.sample(range(len(all_ood_input)), ood_dataset_size)
     selected_indices = torch.tensor(selected_indices)
     print('Total OOD samples: ', len(selected_indices))

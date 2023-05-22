@@ -2,11 +2,12 @@ import torch
 import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 import math
 
 from args import args as parser_args
-from utils.conv_type import GetSubnet
+from utils.conv_type import GetSubnet, _GetSubnet
 
 DenseLinear = nn.Linear
 
@@ -30,6 +31,37 @@ class SubnetLinear(nn.Linear):
         m = GetSubnet.apply(self.clamped_scores, self.prune_rate)
         w = self.weight * m
         return F.linear(x, w, self.bias)
+
+class DICELinear(nn.Linear):
+
+    def __init__(self, in_features, out_features, bias=True, p=90, conv1x1=False):
+        super(DICELinear, self).__init__(in_features, out_features, bias)
+        if conv1x1:
+            self.weight = nn.Parameter(torch.Tensor(out_features, in_features, 1, 1))
+        self.p = p
+        if parser_args.set == 'CIFAR10':
+            self.info = np.load(f"feature_stat/CIFAR-10_densenet_feat_stat.npy")
+        elif parser_args.set == 'CIFAR100':
+            self.info = np.load(f"feature_stat/CIFAR-100_densenet_feat_stat.npy")
+        else:
+            assert 0, "DICE requires the ID dataset to be CIFAR-10 or CIFAR-100"
+        self.masked_w = None
+
+    def calculate_mask_weight(self):
+        self.contrib = self.info[None, :] * self.weight.data.cpu().numpy()
+        self.thresh = np.percentile(self.contrib, self.p)
+        mask = torch.Tensor((self.contrib > self.thresh))
+        self.masked_w = (self.weight.squeeze().cpu() * mask).cuda()
+
+    def forward(self, input):
+        if self.masked_w is None:
+            self.calculate_mask_weight()
+        vote = input[:, None, :] * self.masked_w.cuda()
+        if self.bias is not None:
+            out = vote.sum(2) + self.bias
+        else:
+            out = vote.sum(2)
+        return out
 
 class _SubnetLinear(nn.Linear):
     def __init__(self, *args, **kwargs):
@@ -71,7 +103,7 @@ class _SubnetLinear(nn.Linear):
 
     def forward(self, x):
         # if parser_args.prune_type == "layer_wise":
-        m = GetSubnet.apply(self.clamped_scores, self.prune_rate, self.mask, self.threshold)
+        m = _GetSubnet.apply(self.clamped_scores, self.prune_rate, self.mask, self.threshold)
         # elif parser_args.prune_type == "model_wise":
         #     m = self.mask.clone()
         self.temp_mask.data = m

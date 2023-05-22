@@ -10,7 +10,7 @@ def metrics(labels, examples, recall_level=0.95):
     fpr = fpr_and_fdr_at_recall(labels, examples, recall_level)
     return auroc, aupr, fpr
 
-
+# https://github.com/wetliu/energy_ood/blob/77f3c09b788bb5a7bfde6fd3671228320ea0949c/utils/display_results.py
 def stable_cumsum(arr, rtol=1e-05, atol=1e-08):
     """Use high precision for cumsum and check that final value matches sum
     Parameters

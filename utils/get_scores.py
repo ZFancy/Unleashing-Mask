@@ -327,7 +327,7 @@ class measures(object):
         auroc, aupr, fpr = self.save_best("mahalanobis", labels, examples, id_pred, ood_pred, model, epoch, recall_level=recall_level)
         return id_pred, ood_pred, auroc, aupr, fpr
 
-
+# https://github.com/wetliu/energy_ood/blob/77f3c09b788bb5a7bfde6fd3671228320ea0949c/utils/display_results.py
 def stable_cumsum(arr, rtol=1e-05, atol=1e-08):
     """Use high precision for cumsum and check that final value matches sum
     Parameters
@@ -474,7 +474,8 @@ class ood_measure(object):
                     'labels': labels,
                     'scores': scores
                 }, epoch, "odin")
-        if epoch == args.epochs and self.mahalanobis:
+        # if epoch == args.epochs and self.mahalanobis:
+        if self.mahalanobis:
             sample_mean, precision, best_regressor, best_magnitude, num_output = tune_mahalanobis_hyperparams(model, args.num_classes, trainloader, self.id_loader)
             id_mahalanobis = self.get_mahalanobis(self.id_loader, model, sample_mean, precision, best_regressor, best_magnitude, num_output)
             ood_avg, auroc_avg, aupr_avg, fpr_avg = 0., 0., 0., 0.
@@ -499,6 +500,84 @@ class ood_measure(object):
                     'scores': scores
                 }, epoch, "mahalanobis")
 
+    def ood_recall(self, model, epoch, trainloader=None):
+        ood_num = len(args.ood_set)
+        if self.energy or self.msp:
+            id_energy, id_msp = self.get_scores(self.id_loader, model)
+            energy_dict = {}
+            msp_dict = {}
+            for i, ood_loader in enumerate(self.ood_loaders):
+                ood_energy, ood_msp = self.get_scores(ood_loader, model)
+                energy_dict[args.ood_set[i]] = ood_energy
+                msp_dict[args.ood_set[i]] = ood_msp
+            if self.energy:
+                recal_avg = 0.
+                labels, scores = torch.tensor([]).cuda(), torch.tensor([]).cuda()
+                for k, v in energy_dict.items():
+                    recall= self.compute_recall(id_energy, v)
+                    print(f"energy\t{args.set:>9}\t{k:>12}\trecall\t{recall:<4.2f}")
+                    recal_avg += recall
+                recal_avg /= ood_num
+                print(f"energy\tID\tOOD\trecall\t{recall:<4.2f}")
+                if epoch % args.save_every == 0:
+                    self.save_checkpoint({
+                        'epoch': epoch,
+                        'state_dict': model.state_dict(),
+                        'labels': labels,
+                        'scores': scores
+                    }, epoch, "energy")
+            if self.msp:
+                recal_avg = 0.
+                for k, v in msp_dict.items():
+                    recall= self.compute_recall(id_msp, v)
+                    print(f"msp\t{args.set:>9}\t{k:>12}\trecall\t{recall:<4.2f}")
+                    recal_avg += recall
+                recal_avg /= ood_num
+                print(f"msp\tID\tOOD\trecall\t{recall:<4.2f}")
+                if epoch % args.save_every == 0:
+                    self.save_checkpoint({
+                        'epoch': epoch,
+                        'state_dict': model.state_dict(),
+                        'labels': labels,
+                        'scores': scores
+                    }, epoch, "msp")
+        if self.odin:
+            id_odin = self.get_odin(self.id_loader, model)
+            recal_avg = 0.
+            for i, ood_loader in enumerate(self.ood_loaders):
+                ood_odin = self.get_odin(ood_loader, model)
+                recall= self.compute_recall(id_odin, ood_odin)
+                print(f"odin\t{args.set:>9}\t{k:>12}\trecall\t{recall:<4.2f}")
+                recal_avg += recall
+            recal_avg /= ood_num
+            print(f"odin\tID\tOOD\trecall\t{recall:<4.2f}")
+            if epoch % args.save_every == 0:
+                self.save_checkpoint({
+                    'epoch': epoch,
+                    'state_dict': model.state_dict(),
+                    'labels': labels,
+                    'scores': scores
+                }, epoch, "odin")
+        # if epoch == args.epochs and self.mahalanobis:
+        if self.mahalanobis:
+            sample_mean, precision, best_regressor, best_magnitude, num_output = tune_mahalanobis_hyperparams(model, args.num_classes, trainloader, self.id_loader)
+            id_mahalanobis = self.get_mahalanobis(self.id_loader, model, sample_mean, precision, best_regressor, best_magnitude, num_output)
+            recal_avg = 0.
+            for i, ood_loader in enumerate(self.ood_loaders):
+                ood_mahalanobis = self.get_mahalanobis(ood_loader, model, sample_mean, precision, best_regressor, best_magnitude, num_output)
+                recall= self.compute_recall(id_mahalanobis, ood_mahalanobis)
+                print(f"mahalanobis\t{args.set:>9}\t{k:>12}\trecall\t{recall:<4.2f}")
+                recal_avg += recall
+            recal_avg /= ood_num
+            print(f"mahalanobis\tID\tOOD\trecall\t{recall:<4.2f}")
+            if epoch % args.save_every == 0:
+                self.save_checkpoint({
+                    'epoch': epoch,
+                    'state_dict': model.state_dict(),
+                    'labels': labels,
+                    'scores': scores
+                }, epoch, "mahalanobis")
+
     def save_checkpoint(self, state, epoch, measure):
         directory = f"{args.ckpt_base_dir}/{measure}/"
         if not os.path.exists(directory):
@@ -515,6 +594,12 @@ class ood_measure(object):
         aupr = sk.average_precision_score(labels, scores)
         fpr = fpr_and_fdr_at_recall(labels, scores, recall_level)
         return id_mean, ood_mean, auroc * 100, aupr * 100, fpr * 100, labels, scores
+
+    def compute_recall(self, id_scores, ood_scores):
+        scores = torch.cat((id_scores, ood_scores), 0).cpu().numpy()
+        labels = torch.cat((torch.ones_like(id_scores), torch.zeros_like(ood_scores)), 0).cpu().numpy()
+        recall = sk.recall_score(labels, scores)
+        return recall
     
     def get_scores(self, dataloader, model, temperature=1.0):
         model.eval()

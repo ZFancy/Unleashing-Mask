@@ -1,4 +1,6 @@
-
+"""
+From https://github.com/mitchellnw/micro-net-dnw/blob/master/image_classification/model_profiling.py
+"""
 import numpy as np
 import time
 import torch

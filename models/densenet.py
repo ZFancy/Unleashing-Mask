@@ -1,4 +1,9 @@
-
+# Copyright (c) 2017-present, Facebook, Inc.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+#
 
 import math
 import torch
@@ -6,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utils.builder import get_builder
+from utils.ash import ash_p, ash_b, ash_s
 from args import args
 
 
@@ -122,6 +128,16 @@ class DenseNet3(nn.Module):
         out = self.block3(out)
         out = self.relu(self.bn1(out))
         out = F.avg_pool2d(out, 8)
+
+        if args.ood_method == 'react':
+            out = out.clip(max=args.react_threshold)
+        elif args.ood_method == 'ash_p':
+            out = ash_p(out, args.ash_percentile)
+        elif args.ood_method == 'ash_s':
+            out = ash_s(out, args.ash_percentile)
+        elif args.ood_method == 'ash_b':
+            out = ash_b(out, args.ash_percentile)
+
         out = out.view(-1, self.in_planes)
         out = self.fc(out)
         return out

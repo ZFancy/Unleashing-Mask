@@ -12,10 +12,11 @@ lr: 0.1
 lr_policy: cosine_lr
 
 # ===== Network training config ===== #
-pretrained: pretrained\pretrained_model.state
+pretrained: runs/pretrained_models/densenet_cifar10_last.state
 multigpu: [0]
 epochs: 100
 weight_decay: 0.0001
+droprate: 0.3
 momentum: 0.9
 batch_size: 512
 num_classes: 10
@@ -33,5 +34,3 @@ freeze_weights: True
 
 # ===== Hardware setup ===== #
 workers: 4
-
-# configs/estimate_loss/estimate_loss_cifar10.yaml

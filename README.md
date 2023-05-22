@@ -1,11 +1,65 @@
 # Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability
 
+
+
 ## Setup
 
 1. Set up a virtualenv with python 3.7.4. You can use pyvenv or conda for this.
 2. Run ```pip install -r requirements.txt``` to get requirements
 3. Create a data directory as a base for all datasets. For example, if your base directory is ```/mnt/datasets``` then imagenet would be located at ```/mnt/datasets/ImageNet``` and CIFAR-10 would be located at ```/mnt/datasets/cifar10```
 
+## Quick Usage
+
+UM is quite a easy-to-adopt method to use in your own pipeline for enhancing the OOD discriminative capability. The key point is to add the loss constraint to the CrossEntropyLoss:
+```python
+class CustomLoss(nn.Module):
+    def __init__(self, criterion=None):
+        super(CustomLoss, self).__init__()
+        self.criterion = criterion
+        self.CrossEntropyLoss = nn.CrossEntropyLoss()
+
+    def forward(self, outputs, labels):
+        loss = args.beta * self.CrossEntropyLoss(outputs, labels)
+        if self.criterion != "CrossEntropyLoss":
+            # args.UM is the estimated loss constriant
+            loss = (loss - args.UM).abs() + args.UM 
+        return loss
+```
+
+To use UM/UMAP in your pipeline:
+```python
+...
+from utils.custom_loss import CustomLoss
+
+...
+criterion = CustomLoss("UM")
+
+...
+for input, target in data:
+    ...
+    loss = criterion(model(input), target) # use this to calculate UM loss
+    loss.backward()
+
+...
+```
+
+Or apply UM in a more straightforward way:
+```python
+...
+import torch.nn as nn
+
+...
+criterion = nn.CrossEntropyLoss()
+
+...
+for input, target in data:
+    ...
+    loss = criterion(model(input), target)
+    loss = (loss - args.UM).abs() + args.UM # args.UM is the estimated loss constriant
+    loss.backward()
+
+...
+```
 
 ## Starting an Experiment 
 
@@ -17,7 +71,8 @@ python main.py --config <path/to/config> <override-args>
 
 Common example ```override-args``` include ```--multigpu=<gpu-ids seperated by commas, no spaces>``` to run on GPUs. Run ```python main --help``` for more details.
 
-We provide a pretrained DenseNet-101 model in ```pretrained```.
+We provide pretrained DenseNet-101 models in ```runs/pretrained_models```, which are trained on CIFAR-10/CIFAR-100 respectively. Note that for each setting, we provide the best (middle-stage) model and the last (final-stage) model. The pretrained model are named as ```densenet_<cifar10/cifar100>_<best/last>.pth```.
+
 
 ### Example Run
 
@@ -41,33 +96,35 @@ Before you begin experiment, please arrange your dataset directory as follows:
     |-tinyimagenet
 ```
 
-To estimate the loss constraint for UM/UMAP
+To estimate the loss constraint for UM/UMAP. Note that you can either estimate the loss constraint by ```estimate_loss.py``` or manual tuning.
 ```bash
 python estimate_loss.py --config configs/estimate_loss/estimate_loss_cifar10.yaml \
                 --data <path/to/data-dir>
 ```
 
-To experiment with the post-hoc OOD detection methods
+To experiment with the post-hoc OOD detection methods. Use flag```--msp```, ```--odin```, ```--energy```, ```--mahalanobis``` to control the scoring functions respectively. If more than one function is chosen, OOD performance will be measured under these functions respectively. To evaluate OOD performance, you can either use flag ```--final``` to evaluate right after training, or use flag ```--evaluate``` to evaluate a loaded trained model.
 
 ```bash
-python main.py --config configs/smallscale/example.yaml \
+python main.py --config configs/smallscale/densenet_cifar10.yaml \
                --multigpu 0 \
                --name cifar10_UM_post_hoc \
                --data <path/to/data-dir> \
-               --UM <estimated_loss>
+               --UM <estimated_loss>\
+               --energy
 ```
+python main.py --config configs/smallscale/densenet_cifar10.yaml
 
-To experiment with the Outlier Exposure (OE) OOD detection methods. Use flag ```--sample``` to control the sample method.
+To experiment with the Outlier Exposure (OE) OOD detection methods. Use flag ```--oe-ood-method``` to control the OE-based methods.
 
 ```bash
-python main_OE.py --config configs/smallscale/example.yaml \
+python main_OE.py --config configs/OE/oe-baseline.yaml \
                --multigpu 0 \
                --name cifar10_UM_oe \
                --data <path/to/data-dir> \
-               --sample random \
+               --oe-ood-method <choose from [oe, poem, enregy, doe]> \
                --UM <estimated_loss>
+               --energy
 ```
-
 
 ### Tracking
 
@@ -94,3 +151,12 @@ tqdm==4.36.1
 Werkzeug==0.16.0
 ```
 
+
+## Reference Code
+[1] hidden-networks: https://github.com/allenai/hidden-networks
+
+[2] POEM: https://github.com/deeplearning-wisc/poem
+
+[3] Energy: https://github.com/wetliu/energy_ood
+
+[4] ODIN: https://github.com/JoonHyung-Park/ODIN

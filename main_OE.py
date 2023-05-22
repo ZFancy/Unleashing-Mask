@@ -122,7 +122,8 @@ def main_worker(args):
 
     # Data loading code
     if args.evaluate:
-        acc1, acc5 = validate(data.val_loader, full_model, criterion, args, writer=None, epoch=args.start_epoch)
+        acc1, acc5 = validate(data.val_loader, model, criterion, args, writer=None, epoch=args.start_epoch)
+        measure.ood_metrics(model, args.epochs, data.train_loader)
         return
     
     writer = SummaryWriter(log_dir=log_base_dir)
@@ -154,44 +155,56 @@ def main_worker(args):
         filename=ckpt_base_dir / f"initial.state",
         save=False,
     )
+    
 
     print('---------------------------------before training---------------------------------')
     bayes_nn.sample_BDQN()
     start_validation = time.time()
     acc1, acc5 = validate(data.val_loader, model, criterion, args, writer, -1)
     validation_time.update((time.time() - start_validation) / 60)
-    if (0) % args.save_every == 0:
-        print("checking the OOD performance of the initial model ...")
-        measure.ood_metrics(model, 0, data.train_loader)
+    # if (0) % args.save_every == 0:
+    #     print("checking the OOD performance of the initial model ...")
+    #     measure.ood_metrics(model, 0, data.train_loader)
 
     # Start training
     ood_loader = get_dataset(args.auxiliary_dataset).train_loader
+    if args.oe_ood_method in ['oe', 'energy', 'doe']:
+        selected_ood_loader = select_ood(ood_loader, args.batch_size * args.ood_factor, args.num_classes, args.pool_size, ood_dataset_size)
+
+    if args.oe_ood_method == 'doe':
+        tmp1, tmp2 = args.droprate, args.lr
+        args.droprate = 0
+        args.lr = 1
+        proxy = get_model(args)
+        proxy = set_gpu(args, proxy)
+        proxy_optim = get_optimizer(args, proxy)
+        args.droprate = tmp1
+        args.lr = tmp2
+        
     for epoch in range(args.start_epoch, args.epochs):
         # print(f'Epoch: [{epoch}]')
         lr_policy(epoch, iteration=None)
 
         cur_lr = get_lr(optimizer)
-        if args.sample == "thompson":
-            selected_ood_loader = select_ood_opt(ood_loader, bayes_nn, args.batch_size * args.ood_factor, args.num_classes, args.pool_size, ood_dataset_size)
-        elif args.sample == "random" or args.oe:
-            selected_ood_loader = select_ood(ood_loader, args.batch_size * args.ood_factor, args.num_classes, args.pool_size, ood_dataset_size)
-
         # train for one epoch
-        start_train = time.time()
-        if args.sample == "thompson":
+        if args.oe_ood_method == 'poem':
+            selected_ood_loader = select_ood_opt(ood_loader, bayes_nn, args.batch_size * args.ood_factor, args.num_classes, args.pool_size, ood_dataset_size)
+            start_train = time.time()
             bayes_nn.train_blr(data.train_loader, selected_ood_loader, criterion, optimizer, epoch)
-        elif args.sample == "random" or args.oe:
-            bayes_nn.train_oe(data.train_loader, selected_ood_loader, criterion, optimizer, epoch)
-
-        if args.sample == "thompson":
             bayes_nn.update_representation()
             bayes_nn.update_bays_reg_BDQN()
             bayes_nn.sample_BDQN()
+        elif args.oe_ood_method in ['oe', 'energy']:
+            start_train = time.time()
+            bayes_nn.train_oe(data.train_loader, selected_ood_loader, criterion, optimizer, epoch)
+        elif args.oe_ood_method == 'doe':
+            start_train = time.time()
+            bayes_nn.train_doe(data.train_loader, selected_ood_loader, criterion, optimizer, epoch, proxy, proxy_optim)
 
         train_time.update((time.time() - start_train) / 60)
 
-        if (epoch + 1) % (args.save_every * 5) == 0:
-            measure.ood_metrics(model, epoch+1, data.train_loader)
+        # if (epoch + 1) % (args.save_every * 5) == 0:
+        #     measure.ood_metrics(model, epoch+1, data.train_loader)
 
         # evaluate on validation set
         start_validation = time.time()
@@ -234,8 +247,8 @@ def main_worker(args):
         writer.add_scalar("test/lr", cur_lr, epoch)
         end_epoch = time.time()
 
-    # if args.final:
-    #     measure.ood_metrics(model, args.epochs, data.train_loader)
+    if args.final:
+        measure.ood_metrics(model, args.epochs, data.train_loader)
 
 
 if __name__ == "__main__":

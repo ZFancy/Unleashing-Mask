@@ -125,7 +125,10 @@ class VarianceMeter(Meter):
         )
 
 class Logger(object):
-
+    """
+    Write console output to external text file.
+    Code imported from https://github.com/Cysu/open-reid/blob/master/reid/utils/logging.py.
+    """
     def __init__(self, fpath=None, mode='w'):
         self.console = sys.stdout
         self.file = None
