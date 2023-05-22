@@ -1,7 +1,7 @@
 <h1 align="center"> Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability</h1>
 
 
-This repo contains the sample code of our proposed ```Unleashing Mask (UM)``` and its variant ```Unleashing Mask Adopt Pruning (UMAP)``` in our paper: [Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability](https://https://github.com/ZFancy/Unleashing-Mask) (ICML 2023).
+This repo contains the sample code of our proposed ```Unleashing Mask (UM)``` and its variant ```Unleashing Mask Adopt Pruning (UMAP)``` to adjust the given well-trained model for OOD detection in our paper: [Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability](https://https://github.com/ZFancy/Unleashing-Mask) (ICML 2023).
 <p align="center"><img src="./figures/framework_overview.jpg" width=90% height=50%></p>
 <p align="center"><em>Figure.</em> Framework overview of UM.</p>
 
@@ -136,6 +136,14 @@ python main_OE.py --config configs/OE/oe-baseline.yaml \
 
 When your experiment is done, your experiment base directory will automatically be written to ```runs/<config-name>/prune-rate=<prune-rate>/<experiment-name>``` with ```settings.txt```, ```<ID-Dataset>_log.txt```, ```checkpoints/``` and ```logs/``` subdirectories. If your experiment happens to match a previously created experiment base directory then an integer increment will be added to the filepath (eg. ```/0```, ```/1```, etc.). Checkpoints by default will have the first, best, and last models. To change this behavior, use the ```--save-every``` flag. 
 
+## Sample Results
+
+|  $\mathcal{D}_\text{in}$ | Method | AUROC$\uparrow$ | AUPR$\uparrow$             | FPR95$\downarrow$     | ID-ACC$\uparrow$     | w./w.o. $\mathcal{D}_\text{aux}$   | 
+|:----------:|----------|---------|------------------|------------------|------------------|
+| CIFAR-10   | Energy    | 92.07 (0.22) | 92.72 (0.39) | 42.69 (1.31) | **94.01** (0.08) | |
+| CIFAR-10   | Energy+**UM**     | **93.73** (0.36) | **94.27** (0.60) | **33.29** (1.70) | 92.80 (0.47) | |
+| CIFAR-10   | OE    | 97.07 (0.01) | 97.31 (0.05) | 13.80 (0.28) | 92.59 (0.32) |$\checkmark$ |
+| CIFAR-10   | OE+**UM**    | **97.60** (0.03) | **97.87** (0.02) | **11.22** (0.16) | **93.66** (0.12) |$\checkmark$ |
 
 ## Requirements
 
