@@ -138,7 +138,7 @@ When your experiment is done, your experiment base directory will automatically 
 
 ## Sample Results
 
-|  $\mathcal{D}_\text{in}$ | Method | AUROC$\uparrow$ | AUPR$\uparrow$             | FPR95$\downarrow$     | ID-ACC$\uparrow$     | w./w.o. $\mathcal{D}_\text{aux}$   | 
+|  $\mathcal{D}_\text{in}$ | Method | AUROC $\uparrow$ | AUPR $\uparrow$             | FPR95 $\downarrow$     | ID-ACC $\uparrow$     | w./w.o. $\mathcal{D}_\text{aux}$   | 
 |:----------:|----------|---------|------------------|------------------|------------------|:----:|
 | CIFAR-10   | Energy    | 92.07 (0.22) | 92.72 (0.39) | 42.69 (1.31) | **94.01** (0.08) | |
 | CIFAR-10   | Energy+**UM**     | **93.73** (0.36) | **94.27** (0.60) | **33.29** (1.70) | 92.80 (0.47) | |
