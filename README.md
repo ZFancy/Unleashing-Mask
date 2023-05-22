@@ -1,6 +1,12 @@
-# Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability
+<h1 align="center"> Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability</h1>
 
 
+This repo contains the sample code of our proposed ```Unleashing Mask (UM)``` and its variant ```Unleashing Mask Adopt Pruning (UMAP)``` in our paper: [Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability](https://https://github.com/ZFancy/Unleashing-Mask) (ICML 2023).
+<p align="center"><img src="./figures/framework_overview.jpg" width=90% height=50%></p>
+<p align="center"><em>Figure.</em> Framework overview of UM.</p>
+
+## TL;DR
+Our work reveal an intermediate training stage with better out-of-distribution (OOD) discriminative capability of the well pre-trained model (on classifying the in-distribution (ID) data). We propose Unleashing Mask to restore it of the given well-trained model for OOD detection, by fine-tuning with the estimated loss contraint to forget those relatively atypical ID samples.
 
 ## Setup
 
@@ -153,10 +159,21 @@ Werkzeug==0.16.0
 
 
 ## Reference Code
-[1] hidden-networks: https://github.com/allenai/hidden-networks
+- hidden-networks: https://github.com/allenai/hidden-networks
 
-[2] POEM: https://github.com/deeplearning-wisc/poem
+- POEM: https://github.com/deeplearning-wisc/poem
 
-[3] Energy: https://github.com/wetliu/energy_ood
+- Energy: https://github.com/wetliu/energy_ood
 
-[4] ODIN: https://github.com/JoonHyung-Park/ODIN
+- ODIN: https://github.com/JoonHyung-Park/ODIN
+
+---
+If you find our paper and repo useful, please cite our paper:
+```bibtex
+@inproceedings{zhu2023unleashing,
+title       ={Unleashing Mask: Explore the Intrinsic Out-of-distribution Detection Capability},
+author      ={Jianing Zhu and Hengzhuang Li and Jiangchao Yao and Tongliang Liu and Jianliang Xu and Bo Han},
+booktitle   ={International Conference on Machine Learning},
+year        ={2023}
+}
+```
