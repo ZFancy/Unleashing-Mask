@@ -2,7 +2,7 @@
 
 
 This repo contains the sample code of our proposed ```Unleashing Mask (UM)``` and its variant ```Unleashing Mask Adopt Pruning (UMAP)``` to adjust the given well-trained model for OOD detection in our paper: [Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability](https://https://github.com/ZFancy/Unleashing-Mask) (ICML 2023).
-<p align="center"><img src="./figures/framework_overview.jpg" width=90% height=50%></p>
+<p align="center"><img src="./figures/framework_overview.jpg" width=100% height=50%></p>
 <p align="center"><em>Figure.</em> Framework overview of UM.</p>
 
 ## TL;DR
