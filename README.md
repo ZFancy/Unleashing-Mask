@@ -1,5 +1,15 @@
 <h1 align="center"> Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability</h1>
-
+<p align="center">
+    <a href="https://arxiv.org/abs/2306.03715"><img src="https://img.shields.io/badge/arXiv-2306.03175-darkred" alt="Paper"></a>
+    <!--<a href="https://openreview.net/forum?id=eKllxpLOOm"><img src="https://img.shields.io/badge/OpenReview-SFAT-blue" alt="Paper"></a> -->
+    <a href="https://github.com/ZFancy/Unleashing-Mask"><img src="https://img.shields.io/badge/-Github-grey?logo=github" alt="Github"></a>
+    <!-- <a href="https://colab.research.google.com/drive/1t0_4BxEJ0XncyYvn_VyEQhxwNMvtSUNx?usp=sharing"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab"></a> -->
+    <!--<a href="https://openreview.net/forum?id=eKllxpLOOm"> <img alt="License" src="https://img.shields.io/static/v1?label=Pub&message=ICLR%2723&color=red"> </a>-->
+    <!-- <a href="https://github.com/ZFancy/SFAT/blob/main/license"> <img alt="License" src="https://img.shields.io/github/license/ZFancy/SFAT?color=blue"> </a>-->
+    <!-- <a href="https://neurips.cc/virtual/2022/poster/54643"> <img src="https://img.shields.io/badge/Video-grey?logo=Kuaishou&logoColor=white" alt="Video"></a> -->
+    <!--<a href="https://github.com/ZFancy/SFAT/blob/main/pictures/ICLR23_SFAT.pdf"> <img src="https://img.shields.io/badge/Slides-SFAT-yellow" alt="Slides"></a> -->
+   <!--  <a href="https://icml.cc/media/PosterPDFs/ICML%202022/a8acc28734d4fe90ea24353d901ae678.png"> <img src="https://img.shields.io/badge/Poster-grey?logo=airplayvideo&logoColor=white" alt="Poster"></a> -->
+</p>
 
 This repo contains the sample code of our proposed ```Unleashing Mask (UM)``` and its variant ```Unleashing Mask Adopt Pruning (UMAP)``` to adjust the given well-trained model for OOD detection in our paper: [Unleashing Mask: Explore the Intrinsic Out-of-Distribution Detection Capability](https://https://github.com/ZFancy/Unleashing-Mask) (ICML 2023).
 <p align="center"><img src="./figures/framework_overview.jpg" width=100% height=50%></p>
