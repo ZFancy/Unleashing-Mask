@@ -18,6 +18,8 @@ This repo contains the sample code of our proposed ```Unleashing Mask (UM)``` an
 ## TL;DR
 Our work reveal an intermediate training stage with better out-of-distribution (OOD) discriminative capability of the well pre-trained model (on classifying the in-distribution (ID) data). By exploration from various perspective, we show the data-level characterisitics of ID data is also important for the OOD detection performance of the model. We propose Unleashing Mask to restore it of the given well-trained model for OOD detection, by fine-tuning with the estimated loss contraint to forget those relatively atypical ID samples. 
 
+<p align="center"><img src="./figures/ICML_UM_poster.png" width=100% height=50%></p>
+
 ## Setup
 
 1. Set up a virtualenv with python 3.7.4. You can use pyvenv or conda for this.
