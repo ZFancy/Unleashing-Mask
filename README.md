@@ -163,7 +163,6 @@ Python 3.7.4, CUDA Version 10.1 (also works with 9.2 and 10.0):
 
 ```
 absl-py==0.8.1
-grpcio==1.24.3
 Markdown==3.1.1
 numpy==1.17.3
 Pillow==6.2.1
